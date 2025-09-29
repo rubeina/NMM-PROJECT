@@ -1,0 +1,146 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Blog</title>
+  <link href="tailwind.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom, #f3f4f6, #e5e7eb);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="bg-blue-600 text-white py-6 shadow-lg">
+    <div class="container mx-auto px-4">
+      <h1 class="text-4xl font-bold text-center">My Blog</h1>
+      <p class="text-center mt-2 text-lg opacity-80">Sharing thoughts and ideas</p>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <article class="bg-white rounded-xl shadow-xl p-8 mb-8 max-w-3xl mx-auto">
+      <h2 class="text-3xl font-bold mb-4 text-gray-800">Exploring the Future of Technology</h2>
+      <p class="text-gray-600 mb-6 leading-relaxed">
+        Technology is evolving at an unprecedented pace, shaping our world in ways we never imagined. From artificial intelligence to quantum computing, the possibilities are endless. In this post, we explore the latest trends and their potential impact on society.
+      </p>
+      <div class="border-t pt-6">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-800">Comments</h3>
+        <div id="comment-list" class="space-y-4 mb-6"></div>
+        <form id="comment-form" class="space-y-4">
+          <div>
+            <input
+              id="comment-name"
+              type="text"
+              placeholder="Your Name"
+              class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+          </div>
+          <div>
+            <textarea
+              id="comment-content"
+              placeholder="Add a comment..."
+              rows="4"
+              class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Submit Comment
+          </button>
+        </form>
+      </div>
+    </article>
+  </main>
+
+  <footer class="bg-gray-800 text-white py-4">
+    <div class="container mx-auto px-4 text-center">
+      <p>&copy; 2025 My Blog. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Initialize comments from localStorage
+    const comments = JSON.parse(localStorage.getItem('comments')) || [];
+    const commentList = document.getElementById('comment-list');
+    const commentForm = document.getElementById('comment-form');
+
+    // Function to render comments
+    function renderComments() {
+      commentList.innerHTML = '';
+      if (comments.length === 0) {
+        commentList.innerHTML = '<p class="text-gray-500">No comments yet.</p>';
+        return;
+      }
+      comments.forEach(comment => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'border-b py-3';
+        commentDiv.innerHTML = `
+          <p class="font-semibold text-gray-800">${comment.name}</p>
+          <p class="text-gray-600">${comment.content}</p>
+        `;
+        commentList.appendChild(commentDiv);
+      });
+    }
+
+    // Handle form submission
+    commentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('comment-name').value.trim();
+      const content = document.getElementById('comment-content').value.trim();
+      if (name && content) {
+        comments.push({ id: comments.length + 1, name, content });
+        localStorage.setItem('comments', JSON.stringify(comments));
+        renderComments();
+        commentForm.reset();
+      }
+    });
+
+    // Initial render
+    renderComments();
+  </script>
+</body>
+</html>
